@@ -2,14 +2,6 @@
 import { extension_settings, getContext } from "../../../extensions.js";
 import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from "../../../../script.js";
 
-let tokenCounts;
-
-eventSource.on(event_types.GENERATION_ENDED, () => {
-  const { chatMetadata } = getContext();
-  console.log("Tokens used:", chatMetadata.total_tokens);
-  tokenCounts = chatMetadata.total_tokens
-});
-
 // Keep track of where your extension is located
 const extensionName = "sillyrpc-ui";
 const defaultSettings = {
@@ -149,7 +141,7 @@ async function onChatChanged() {
     ? context.chat.map(m => m.mes)
     : Object.values(context.chat).map(m => m.mes);
   const total = await context.getTokenCountAsync(bodies.join("\n"));
-
+  console.log(`[SillyRPC] Token count retrieved: ${total}`)
   let character = null;
 
   if (context.characterId !== undefined && context.characterId !== null) {
