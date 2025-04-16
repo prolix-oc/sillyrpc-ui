@@ -33,6 +33,31 @@ function formatModelName(modelName) {
   }
 }
 
+function getProviderLabel() {
+  const { chat_completion_source: chatSrc,
+          text_completion_source: textSrc,
+          custom_url,
+          openai_api_base } = getContext().oai_settings;
+
+  if (chatSrc && chatSrc !== 'Custom') return chatSrc;
+
+  if (textSrc && textSrc !== 'Custom') return textSrc;
+
+  const rawUrl = custom_url || openai_api_base || '';
+  if (rawUrl) {
+    try {
+      const host = new URL(rawUrl).hostname;
+      const parts = host.split('.');
+      const domain = parts.slice(-2).join('.');
+      return domain.charAt(0).toUpperCase() + domain.slice(1);
+    } catch {
+      return rawUrl; // fallback to the raw string if parsing fails
+    }
+  }
+
+  return '';
+}
+
 // Try to get current model info from SillyTavern
 function getCurrentModelInfo() {
   const ctx = getContext();
@@ -126,7 +151,7 @@ function sendUpdate(character) {
     headers: getRequestHeaders(),
     body: JSON.stringify({
       details: `${msgCount} chats deep with ${character.name} (${tokenCount} tokens)` || 'Unknown',
-      state: `Using ${prettyModel}`,
+      state: `Using ${prettyModel} through ${character.provider}`,
       largeImageKey: character.imageKey || '',
       startTimestamp: character.chatStartTimestamp || Date.now()
     })
@@ -142,6 +167,8 @@ async function onChatChanged() {
     : Object.values(context.chat).map(m => m.mes);
   const total = await context.getTokenCountAsync(bodies.join("\n"));
   console.log(`[SillyRPC] Token count retrieved: ${total}`)
+  const provider = getProviderLabel();
+
   let character = null;
 
   if (context.characterId !== undefined && context.characterId !== null) {
@@ -150,6 +177,7 @@ async function onChatChanged() {
       messageCount: context.chat?.length || 0,
       imageKey: context.characters[context.characterId]?.avatar || '',
       tokensChat: total,
+      provider: provider,
       chatStartTimestamp: Date.now()
     };
   } else if (context.groupId) {
@@ -160,6 +188,7 @@ async function onChatChanged() {
         messageCount: context.chat?.length || 0,
         imageKey: '', // Groups may not have an image key
         tokensChat: total,
+        provider: provider,
         chatStartTimestamp: Date.now()
       };
     }
