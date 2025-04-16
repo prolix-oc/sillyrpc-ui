@@ -1,6 +1,6 @@
 // index.js
 import { extension_settings, getContext } from "../../../extensions.js";
-import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced, getTokenCountAsync } from "../../../../script.js";
+import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from "../../../../script.js";
 
 // Keep track of where your extension is located
 const extensionName = "sillyrpc-ui";
@@ -139,7 +139,7 @@ async function onChatChanged() {
   const context = getContext();
   const allText = chat.map(m => m.mes).join('\n');
   let character = null;
-  const tokenCount = await getTokenCountAsync(allText, /*padding=*/0);
+  const tokenCount = await countSourceTokens(allText, 0);
 
   if (context.characterId !== undefined && context.characterId !== null) {
     character = {
