@@ -125,7 +125,7 @@ function sendUpdate(character) {
     method: 'POST',
     headers: getRequestHeaders(),
     body: JSON.stringify({
-      details: `${msgCount} chats deep with ${character.name} || 'Unknown'}`,
+      details: `${msgCount} chats deep with ${character.name}` || 'Unknown',
       state: `Using ${prettyModel}`,
       largeImageKey: character.imageKey || '',
       startTimestamp: character.chatStartTimestamp || Date.now()
