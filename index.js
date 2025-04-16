@@ -1,6 +1,6 @@
 // index.js
 import { extension_settings, getContext } from "../../../extensions.js";
-import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from "../../../../script.js";
+import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced, ChatCompletionService } from "../../../../script.js";
 
 let tokenCounts;
 
@@ -145,6 +145,8 @@ function sendUpdate(character) {
 async function onChatChanged() {
   console.log('SillyRPC UI: Chat changed event detected');
   const context = getContext();
+  const bodies = Array.isArray(context.chat) ? context.chat.map(m => m.mes) : Object.values(context.chat).map(m => m.mes);
+  const tokens = context.getTextTokens(bodies).flat().length;
 
   let character = null;
 
@@ -162,7 +164,7 @@ async function onChatChanged() {
         name: group.name || 'Group Chat',
         messageCount: context.chat?.length || 0,
         imageKey: '', // Groups may not have an image key
-        tokensChat: tokenCounts,
+        tokensChat: tokens,
         chatStartTimestamp: Date.now()
       };
     }
