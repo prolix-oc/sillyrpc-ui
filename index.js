@@ -202,15 +202,14 @@ async function sendUpdate(character) {
 async function uploadAvatarBlob(blob) {
   const form = new FormData();
   form.append('reqtype', 'fileupload');
-  // no userhash = anonymous
   form.append('fileToUpload', blob, 'avatar.png');
-
-  const res = await fetch('https://catbox.moe/user/api.php', {
+  const proxy = 'https://cors-anywhere.herokuapp.com/';
+  const res = await fetch(proxy + 'https://catbox.moe/user/api.php', {
     method: 'POST',
     body: form
   });
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-  const url = await res.text();  // e.g. "https://files.catbox.moe/abcd1234.png"
+  const url = await res.text();
   return url;
 }
 
@@ -218,8 +217,8 @@ async function uploadAvatarUrl(imageUrl) {
   const form = new FormData();
   form.append('reqtype', 'urlupload');
   form.append('url', imageUrl);
-
-  const res = await fetch('https://catbox.moe/user/api.php', {
+  const proxy = 'https://cors-anywhere.herokuapp.com/';
+  const res = await fetch(proxy + 'https://catbox.moe/user/api.php', {
     method: 'POST',
     body: form
   });
@@ -227,7 +226,6 @@ async function uploadAvatarUrl(imageUrl) {
   return await res.text();
 }
 
-// Enhanced chat change handler
 async function onChatChanged() {
   console.log('SillyRPC UI: Chat changed event detected');
   const context = getContext();
