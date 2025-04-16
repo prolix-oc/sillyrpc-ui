@@ -149,6 +149,7 @@ async function onChatChanged() {
       name: context.name2 || 'Unknown',
       messageCount: context.chat?.length || 0,
       imageKey: context.characters[context.characterId]?.avatar || '',
+      tokensChat: total,
       chatStartTimestamp: Date.now()
     };
   } else if (context.groupId) {
