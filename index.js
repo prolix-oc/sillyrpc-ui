@@ -139,7 +139,7 @@ async function onChatChanged() {
   const context = getContext();
   const bodies = Array.isArray(context.chat) ? context.chat.map(m => m.mes) : Object.values(context.chat).map(m => m.mes);
   const tokens = context.getTextTokens(bodies).flat().length;
-
+  console.log(`[SillyRPC] Token count: ${tokens}`)
   let character = null;
 
   if (context.characterId !== undefined && context.characterId !== null) {
