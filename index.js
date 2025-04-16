@@ -56,31 +56,6 @@ function getPrettyProvider(raw) {
   return PROVIDER_MAP[raw.toLowerCase()] || formatProviderName(raw);
 }
 
-function getProviderLabel() {
-  const ctx = getContext();
-  if (ctx.chatCompletionSettings?.chat_completion_source) {
-    return ctx.chatCompletionSettings.chat_completion_source;
-  }
-  if (ctx.textCompletionSettings?.text_completion_source) {
-    return ctx.textCompletionSettings.text_completion_source;
-  }
-  const rawUrl = ctx.chatCompletionSettings?.openai_api_base
-              || ctx.chatCompletionSettings?.custom_url
-              || '';
-  if (rawUrl) {
-    try {
-      const host = new URL(rawUrl).hostname;
-      const parts = host.split('.');
-      const domain = parts.slice(-2).join('.');
-      const cased = domain.charAt(0).toUpperCase() + domain.slice(1);
-      return getPrettyProvider(cased);
-    } catch {
-      return getPrettyProvider(rawUrl);
-    }
-  }
-  return '';
-}
-
 // Try to get current model info from SillyTavern
 function getCurrentModelInfo() {
   const ctx = getContext();
@@ -190,7 +165,8 @@ async function onChatChanged() {
     : Object.values(context.chat).map(m => m.mes);
   const total = await context.getTokenCountAsync(bodies.join("\n"));
   console.log(`[SillyRPC] Token count retrieved: ${total}`)
-  const provider = getProviderLabel();
+  const rawProvider = getContext().chatCompletionSettings.chat_completion_source;
+  const provider = getPrettyProvider(rawProvider);
 
   let character = null;
 
