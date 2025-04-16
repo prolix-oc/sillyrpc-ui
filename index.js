@@ -1,5 +1,5 @@
 // index.js
-import { extension_settings, getContext, loadExtensionSettings } from "../../../extensions.js";
+import { extension_settings, getContext } from "../../../extensions.js";
 import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from "../../../../script.js";
 
 // Keep track of where your extension is located
@@ -14,47 +14,37 @@ const defaultSettings = {
 // Format model name as requested
 function formatModelName(modelName) {
   if (!modelName) return '';
-  
-  // Handle hyphens and capitalization
   if (modelName.includes('/')) {
-    // Format like 'deepseek-ai/Deepseek-V3-0324' to 'Deepseek V3 0324'
     const parts = modelName.split('/');
-    const nameOnly = parts[parts.length - 1];
-    return nameOnly.replace(/-/g, ' ').split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+    const tail = parts.pop();
+    return tail
+      .split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
   } else {
-    // For locally hosted models, just capitalize first letter of each word
-    return modelName.split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+    return modelName
+      .split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
   }
 }
 
 // Try to get current model info from SillyTavern
 function getCurrentModelInfo() {
-  try {
-    const context = getContext();
-    // Try different possible locations for the model name
-    let modelName = '';
-    
-    if (context.chat_metadata?.model) {
-      modelName = context.chat_metadata.model;
-    } else if (window.SillyTavern?.getActiveModelName) {
-      modelName = window.SillyTavern.getActiveModelName();
-    } else if (context.currentModel) {
-      modelName = context.currentModel;
-    } else if (context.api?.currentModel) {
-      modelName = context.api.currentModel;
-    }
-    
-    return {
-      name: formatModelName(modelName)
-    };
-  } catch (error) {
-    console.error('SillyRPC UI: Error getting model info:', error);
-    return { name: '' };
+  const ctx = getContext();
+  const oai = ctx.oai_settings || {};
+  
+  let modelName = '';
+  if (typeof ctx.getChatCompletionModel === 'function') {
+    modelName = ctx.getChatCompletionModel();
   }
+
+  if (!modelName && oai.text_completion_source) {
+    const srcKey = oai.text_completion_source.replace(/\s+/g, '').toLowerCase();
+    const fieldKey = `${srcKey}_model`;
+    modelName = oai[fieldKey] || '';
+  }
+
+  return { name: formatModelName(modelName || '') };
 }
 
 // Loads the extension settings if they exist, otherwise initializes them to the defaults
@@ -123,35 +113,22 @@ async function onSaveClick() {
 
 // Function to send updates to the RPC server
 function sendUpdate(character) {
-  if (!character) return;
-  
-  try {
-    // Try to get model info
-    const modelInfo = getCurrentModelInfo();
-    
-    // Create a state string with both model and message count when possible
-    let stateText = '';
-    if (modelInfo.name) {
-      stateText = `Using ${modelInfo.name} | ${character.messageCount || 0} messages`;
-    } else {
-      stateText = `${character.messageCount || 0} messages deep`;
-    }
-    
-    fetch('/api/plugins/sillyrpc/update', {
-      method: 'POST',
-      headers: getRequestHeaders(),
-      body: JSON.stringify({
-        details: `Chatting it up with ${character.name || 'Unknown'}`,
-        state: stateText,
-        largeImageKey: character.imageKey || '',
-        startTimestamp: character.chatStartTimestamp || Date.now()
-      })
-    }).catch(err => {
-      console.error('SillyRPC UI: Error sending update', err);
-    });
-  } catch (err) {
-    console.error('SillyRPC UI: Error preparing update', err);
-  }
+  const { name: prettyModel } = getCurrentModelInfo();
+  const msgCount = character.messageCount || 0;
+  const stateText = prettyModel
+    ? `Using ${prettyModel} | ${msgCount} messages`
+    : `${msgCount} messages deep`;
+
+  fetch('/api/plugins/sillyrpc/update', {
+    method: 'POST',
+    headers: getRequestHeaders(),
+    body: JSON.stringify({
+      details: `Chatting it up with ${character.name || 'Unknown'}`,
+      state: stateText,
+      largeImageKey: character.imageKey || '',
+      startTimestamp: character.chatStartTimestamp || Date.now()
+    })
+  });
 }
 
 // Enhanced chat change handler
