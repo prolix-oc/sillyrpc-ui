@@ -2,6 +2,14 @@
 import { extension_settings, getContext } from "../../../extensions.js";
 import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from "../../../../script.js";
 
+let tokenCounts;
+
+eventSource.on(event_types.GENERATION_ENDED, () => {
+  const { chatMetadata } = getContext();
+  console.log("Tokens used:", chatMetadata.total_tokens);
+  tokenCounts = chatMetadata.total_tokens
+});
+
 // Keep track of where your extension is located
 const extensionName = "sillyrpc-ui";
 const defaultSettings = {
@@ -137,9 +145,9 @@ function sendUpdate(character) {
 async function onChatChanged() {
   console.log('SillyRPC UI: Chat changed event detected');
   const context = getContext();
-  const bodies = Array.isArray(context.chat) ? context.chat.map(m => m.mes) : Object.values(context.chat).map(m => m.mes);
-  const tokens = context.getTextTokens(bodies).flat().length;
-  console.log(`[SillyRPC] Token count: ${tokens}`)
+  //const bodies = Array.isArray(context.chat) ? context.chat.map(m => m.mes) : Object.values(context.chat).map(m => m.mes);
+  //const tokens = context.getTextTokens(bodies).flat().length;
+  //console.log(`[SillyRPC] Token count: ${tokens}`)
   let character = null;
 
   if (context.characterId !== undefined && context.characterId !== null) {
@@ -156,7 +164,7 @@ async function onChatChanged() {
         name: group.name || 'Group Chat',
         messageCount: context.chat?.length || 0,
         imageKey: '', // Groups may not have an image key
-        tokensChat: tokens,
+        tokensChat: tokenCounts,
         chatStartTimestamp: Date.now()
       };
     }
