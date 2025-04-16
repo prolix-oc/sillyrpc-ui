@@ -203,7 +203,7 @@ async function uploadAvatarBlob(blob) {
   const form = new FormData();
   form.append('reqtype', 'fileupload');
   form.append('fileToUpload', blob, 'avatar.png');
-  const proxy = 'https://cors-anywhere.herokuapp.com/';
+  const proxy = 'https://cors-proxy.fringe.zone/';
   const res = await fetch(proxy + 'https://catbox.moe/user/api.php', {
     method: 'POST',
     body: form
@@ -217,7 +217,7 @@ async function uploadAvatarUrl(imageUrl) {
   const form = new FormData();
   form.append('reqtype', 'urlupload');
   form.append('url', imageUrl);
-  const proxy = 'https://cors-anywhere.herokuapp.com/';
+  const proxy = 'https://cors-proxy.fringe.zone/';
   const res = await fetch(proxy + 'https://catbox.moe/user/api.php', {
     method: 'POST',
     body: form
