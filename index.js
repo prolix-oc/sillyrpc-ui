@@ -2,6 +2,14 @@
 import { extension_settings, getContext } from "../../../extensions.js";
 import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from "../../../../script.js";
 
+const AVATAR_CACHE_KEY = 'sillyrpc_avatar_cache';
+let avatarCache = {};
+try {
+  avatarCache = JSON.parse(localStorage.getItem(AVATAR_CACHE_KEY)) || {};
+} catch {
+  avatarCache = {};
+}
+
 // Keep track of where your extension is located
 const extensionName = "sillyrpc-ui";
 const defaultSettings = {
@@ -19,6 +27,39 @@ const PROVIDER_MAP = {
   chub:        'Chub.ai',
   mistralai:   'MistralAI'
 };
+
+function persistAvatarCache() {
+  try {
+    localStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify(avatarCache));
+  } catch {}
+}
+
+async function resolveAvatarUrl(character) {
+  const key = character.imageKey || character.localAvatarBlob?.name;
+  if (!key) return '';
+
+  if (avatarCache[key]) {
+    return avatarCache[key];
+  }
+
+  let url;
+  try {
+    if (character.localAvatarBlob) {
+      url = await uploadAvatarBlob(character.localAvatarBlob);
+    } else {
+      url = await uploadAvatarUrl(character.imageKey);
+    }
+  } catch (err) {
+    console.error('Failed to upload avatar:', err);
+    return '';
+  }
+
+  // 3️⃣ Cache & persist
+  avatarCache[key] = url;
+  persistAvatarCache();
+
+  return url;
+}
 
 // Format model name
 function formatModelName(modelName) {
@@ -141,10 +182,8 @@ async function onSaveClick() {
 
 // Function to send updates to the RPC server
 async function sendUpdate(character) {
-  let imageUrl = character.imageKey;
-  if (character.localAvatarBlob) {
-    imageUrl = await uploadAvatarBlob(character.localAvatarBlob);
-  }
+  const largeImageKey = await resolveAvatarUrl(character);
+
   const { name: prettyModel } = getCurrentModelInfo();
   const msgCount = character.messageCount || 0;
   const tokenCount = character.tokensChat
@@ -154,7 +193,7 @@ async function sendUpdate(character) {
     body: JSON.stringify({
       details: `${msgCount} chats deep with ${character.name} (${tokenCount} tokens)` || 'Unknown',
       state: `Using ${prettyModel} through ${character.provider}`,
-      largeImageKey: imageUrl || '',
+      largeImageKey,
       startTimestamp: character.chatStartTimestamp || Date.now()
     })
   });
@@ -173,6 +212,19 @@ async function uploadAvatarBlob(blob) {
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
   const url = await res.text();  // e.g. "https://files.catbox.moe/abcd1234.png"
   return url;
+}
+
+async function uploadAvatarUrl(imageUrl) {
+  const form = new FormData();
+  form.append('reqtype', 'urlupload');
+  form.append('url', imageUrl);
+
+  const res = await fetch('https://catbox.moe/user/api.php', {
+    method: 'POST',
+    body: form
+  });
+  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  return await res.text();
 }
 
 // Enhanced chat change handler
