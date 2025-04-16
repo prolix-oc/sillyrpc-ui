@@ -1,15 +1,12 @@
 // index.js
 import { extension_settings, getContext } from "../../../extensions.js";
-import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced, updateChatMetadata  } from "../../../../script.js";
+import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from "../../../../script.js";
+
+let tokenCounts;
 
 eventSource.on(event_types.GENERATE_AFTER_DATA, (type, data) => {
   if (type === ChatCompletionService.TYPE && data.usage) {
-    // Store usage in chat metadata for later access
-    updateChatMetadata({
-      prompt_tokens: data.usage.prompt_tokens,
-      completion_tokens: data.usage.completion_tokens,
-      total_tokens: data.usage.total_tokens
-    }, false);
+    tokenCounts = data.usage.total_tokens
   }
 });
 
@@ -148,7 +145,6 @@ function sendUpdate(character) {
 async function onChatChanged() {
   console.log('SillyRPC UI: Chat changed event detected');
   const context = getContext();
-  const meta = context.chatMetadata;
 
   let character = null;
 
@@ -166,7 +162,7 @@ async function onChatChanged() {
         name: group.name || 'Group Chat',
         messageCount: context.chat?.length || 0,
         imageKey: '', // Groups may not have an image key
-        tokensChat: meta.total_tokens,
+        tokensChat: tokenCounts,
         chatStartTimestamp: Date.now()
       };
     }
