@@ -5,7 +5,8 @@
   "optional": [],
   "js": "index.js",
   "css": "style.css",
+  "html": "settings.html",
   "author": "Prolix OCs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "homePage": "https://github.com/prolix-oc/sillyrpc-ui"
 }
