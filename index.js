@@ -34,16 +34,16 @@ function formatModelName(modelName) {
 }
 
 function getProviderLabel() {
-  const { chat_completion_source: chatSrc,
-          text_completion_source: textSrc,
-          custom_url,
-          openai_api_base } = getContext().oai_settings;
-
-  if (chatSrc && chatSrc !== 'Custom') return chatSrc;
-
-  if (textSrc && textSrc !== 'Custom') return textSrc;
-
-  const rawUrl = custom_url || openai_api_base || '';
+  const ctx = getContext();
+  if (ctx.chatCompletionSettings?.chat_completion_source) {
+    return ctx.chatCompletionSettings.chat_completion_source;
+  }
+  if (ctx.textCompletionSettings?.text_completion_source) {
+    return ctx.textCompletionSettings.text_completion_source;
+  }
+  const rawUrl = ctx.chatCompletionSettings?.openai_api_base
+              || ctx.chatCompletionSettings?.custom_url
+              || '';
   if (rawUrl) {
     try {
       const host = new URL(rawUrl).hostname;
@@ -51,10 +51,9 @@ function getProviderLabel() {
       const domain = parts.slice(-2).join('.');
       return domain.charAt(0).toUpperCase() + domain.slice(1);
     } catch {
-      return rawUrl; // fallback to the raw string if parsing fails
+      return rawUrl;
     }
   }
-
   return '';
 }
 
