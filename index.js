@@ -1,112 +1,123 @@
 // index.js
+import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from '../../../../script.js';
+import { extension_settings, getContext } from '../../../extensions.js';
 import './style.css';
 
-document.addEventListener('DOMContentLoaded', async function() {
-  // Store configuration globally so it's always current
-  let globalConfig = {
+// Initialize settings if they don't exist
+if (!extension_settings.sillyrpc) {
+  extension_settings.sillyrpc = {
     mode: 'local',
     agentUrl: 'ws://localhost:6472'
   };
+  saveSettingsDebounced();
+}
 
-  try {
-    console.log('SillyRPC UI: Initializing...');
-    
-    // Check if SillyTavern object exists
-    if (!window.SillyTavern) {
-      console.error('SillyRPC UI: SillyTavern object not found');
-      return;
-    }
+// Function to send updates to the RPC server
+function sendUpdate(character) {
+  if (!extension_settings.sillyrpc || !character) return;
+  
+  fetch('/api/plugins/sillyrpc/update', {
+    method: 'POST',
+    headers: getRequestHeaders(),
+    body: JSON.stringify({
+      details: `Chatting as ${character.name}`,
+      state: `${character.messageCount} messages`,
+      largeImageKey: character.imageKey,
+      startTimestamp: character.chatStartTimestamp
+    })
+  }).catch(err => {
+    console.error('SillyRPC UI: Error sending update', err);
+  });
+}
 
-    // 1. Fetch and render existing config
-    try {
-      const res = await fetch('/api/plugins/sillyrpc/settings');
-      if (!res.ok) {
-        throw new Error(`Failed to fetch settings: ${res.status} ${res.statusText}`);
-      }
-      globalConfig = await res.json();
-      console.log('SillyRPC UI: Configuration loaded');
-    } catch (error) {
-      console.warn('SillyRPC UI: Could not load settings, using defaults', error);
-    }
+// Handle chat and message events
+function onChatChanged() {
+  const context = getContext();
+  let character = null;
 
-    // Make sure the DOM elements exist before accessing them
-    const modeElement = document.getElementById('rpc-mode');
-    const urlElement = document.getElementById('agent-url');
-    const saveButton = document.getElementById('save-settings');
-    
-    if (!modeElement || !urlElement || !saveButton) {
-      console.error('SillyRPC UI: Required DOM elements not found');
-      return;
-    }
-    
-    // Set initial values
-    modeElement.value = globalConfig.mode || 'local';
-    urlElement.value = globalConfig.agentUrl || 'ws://localhost:6472';
-
-    // 2. Save button handler
-    saveButton.addEventListener('click', async () => {
-      try {
-        const newConfig = {
-          mode: modeElement.value,
-          agentUrl: urlElement.value
-        };
-        
-        const saveRes = await fetch('/api/plugins/sillyrpc/settings', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify(newConfig)
-        });
-        
-        if (!saveRes.ok) {
-          throw new Error(`Failed to save settings: ${saveRes.status} ${saveRes.statusText}`);
-        }
-        
-        // Update global config
-        globalConfig = newConfig;
-        alert('Settings saved!');
-        console.log('SillyRPC UI: Settings saved successfully');
-      } catch (err) {
-        console.error('SillyRPC UI: Error saving settings', err);
-        alert(`Error saving settings: ${err.message}`);
-      }
-    });
-
-    // 3. Listen for chat and message events
-    window.SillyTavern.on('messageReceived', msg => {
-      if (msg && msg.character) {
-        sendUpdate(msg.character);
-      }
-    });
-    
-    window.SillyTavern.on('chatChanged', info => {
-      if (info && info.character) {
-        sendUpdate(info.character);
-      }
-    });
-
-    console.log('SillyRPC UI: Successfully initialized');
-  } catch (err) {
-    console.error('SillyRPC UI: Initialization error', err);
-  }
-
-  function sendUpdate(character) {
-    if (!character) return;
-    
-    try {
-      fetch('/api/plugins/sillyrpc/update', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          details: `Chatting as ${character.name || 'Unknown'}`,
-          state: `${character.messageCount || 0} messages`,
-          largeImageKey: character.imageKey || '',
-          startTimestamp: character.chatStartTimestamp || Date.now()
-        })
-      }).catch(err => {
-        console.error('SillyRPC UI: Error sending update', err);
-      });
-    } catch (err) {
-      console.error('SillyRPC UI: Error preparing update', err);
+  if (context.characterId !== undefined && context.characterId !== null) {
+    character = {
+      name: context.name2 || 'Unknown',
+      messageCount: context.chat?.length || 0,
+      imageKey: context.characters[context.characterId]?.avatar || '',
+      chatStartTimestamp: Date.now()
+    };
+  } else if (context.groupId) {
+    const group = context.groups.find(g => g.id === context.groupId);
+    if (group) {
+      character = {
+        name: group.name || 'Group Chat',
+        messageCount: context.chat?.length || 0,
+        imageKey: '', // Groups may not have an image key
+        chatStartTimestamp: Date.now()
+      };
     }
   }
+
+  if (character) {
+    sendUpdate(character);
+  }
+}
+
+// Initialize when jQuery is ready
+jQuery(() => {
+  // Create and inject the settings HTML
+  const html = `
+  <div class="sillyrpc-settings">
+    <div class="inline-drawer">
+      <div class="inline-drawer-toggle inline-drawer-header">
+        <b>Discord RPC Settings</b>
+        <div class="inline-drawer-icon fa-solid fa-circle-chevron-down"></div>
+      </div>
+      <div class="inline-drawer-content">
+        <label>Mode:
+          <select id="rpc-mode">
+            <option value="local">Local</option>
+            <option value="remote">Remote</option>
+          </select>
+        </label><br/>
+        <label>Agent URL:
+          <input id="agent-url" type="text" placeholder="ws://localhost:6472"/>
+        </label><br/>
+        <button id="save-settings" class="menu_button">Save</button>
+      </div>
+    </div>
+  </div>`;
+  
+  // Append settings HTML to the extensions settings container
+  $('#extensions_settings2').append(html);
+  
+  // Populate settings with current values
+  $('#rpc-mode').val(extension_settings.sillyrpc.mode);
+  $('#agent-url').val(extension_settings.sillyrpc.agentUrl);
+  
+  // Save button handler
+  $('#save-settings').on('click', async () => {
+    // Update settings object
+    extension_settings.sillyrpc.mode = $('#rpc-mode').val();
+    extension_settings.sillyrpc.agentUrl = $('#agent-url').val();
+    
+    // Save to server
+    await fetch('/api/plugins/sillyrpc/settings', {
+      method: 'POST',
+      headers: getRequestHeaders(),
+      body: JSON.stringify(extension_settings.sillyrpc)
+    });
+    
+    // Save to local storage
+    saveSettingsDebounced();
+    
+    toastr.success('SillyRPC settings saved!');
+  });
+  
+  // Subscribe to events
+  eventSource.on(event_types.MESSAGE_RECEIVED, (msg) => {
+    if (msg?.character) {
+      sendUpdate(msg.character);
+    }
+  });
+  
+  eventSource.on(event_types.CHAT_CHANGED, onChatChanged);
+  
+  console.log('SillyRPC UI extension initialized');
 });
