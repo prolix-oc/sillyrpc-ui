@@ -1,12 +1,12 @@
 {
   "display_name": "SillyRPC UI",
-  "loading_order": 16,
+  "loading_order": 30,
   "requires": [],
   "optional": [],
   "js": "index.js",
-  "css": "style.css",
-  "html": "settings.html",
+  "css": "",
   "author": "Prolix OCs",
-  "version": "1.0.2",
-  "homePage": "https://github.com/prolix-oc/sillyrpc-ui"
+  "version": "1.0.3",
+  "homePage": "https://github.com/prolix-oc/sillyrpc-ui",
+  "auto_update": true
 }
