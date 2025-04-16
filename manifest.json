@@ -4,9 +4,9 @@
   "requires": [],
   "optional": [],
   "js": "index.js",
-  "css": "",
+  "css": "style.css",
   "author": "Prolix OCs",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "homePage": "https://github.com/prolix-oc/sillyrpc-ui",
   "auto_update": true
 }
