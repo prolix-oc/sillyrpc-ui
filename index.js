@@ -140,7 +140,11 @@ async function onSaveClick() {
 }
 
 // Function to send updates to the RPC server
-function sendUpdate(character) {
+async function sendUpdate(character) {
+  let imageUrl = character.imageKey;
+  if (character.localAvatarBlob) {
+    imageUrl = await uploadAvatarBlob(character.localAvatarBlob);
+  }
   const { name: prettyModel } = getCurrentModelInfo();
   const msgCount = character.messageCount || 0;
   const tokenCount = character.tokensChat
@@ -150,10 +154,25 @@ function sendUpdate(character) {
     body: JSON.stringify({
       details: `${msgCount} chats deep with ${character.name} (${tokenCount} tokens)` || 'Unknown',
       state: `Using ${prettyModel} through ${character.provider}`,
-      largeImageKey: character.imageKey || '',
+      largeImageKey: imageUrl || '',
       startTimestamp: character.chatStartTimestamp || Date.now()
     })
   });
+}
+
+async function uploadAvatarBlob(blob) {
+  const form = new FormData();
+  form.append('reqtype', 'fileupload');
+  // no userhash = anonymous
+  form.append('fileToUpload', blob, 'avatar.png');
+
+  const res = await fetch('https://catbox.moe/user/api.php', {
+    method: 'POST',
+    body: form
+  });
+  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  const url = await res.text();  // e.g. "https://files.catbox.moe/abcd1234.png"
+  return url;
 }
 
 // Enhanced chat change handler
