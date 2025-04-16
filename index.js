@@ -2,14 +2,6 @@
 import { extension_settings, getContext } from "../../../extensions.js";
 import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced, ChatCompletionService } from "../../../../script.js";
 
-let tokenCounts;
-
-eventSource.on(event_types.GENERATE_AFTER_DATA, (type, data) => {
-  if (type === ChatCompletionService.TYPE && data.usage) {
-    tokenCounts = data.usage.total_tokens
-  }
-});
-
 // Keep track of where your extension is located
 const extensionName = "sillyrpc-ui";
 const defaultSettings = {
