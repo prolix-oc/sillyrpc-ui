@@ -22,16 +22,16 @@ const defaultSettings = {
 // Format model name
 function formatModelName(modelName) {
   if (!modelName) return '';
-  
+
   let cleanName = modelName.split(':')[0].trim();
 
   if (cleanName.includes('/')) {
     const parts = cleanName.split('/');
-    const tail  = parts[parts.length - 1];
+    const tail = parts[parts.length - 1];
     return tail
       .split('-')
       .map(w => w.charAt(0).toUpperCase()
-                 + w.slice(1))
+        + w.slice(1))
       .join(' ');
   } else {
     return cleanName
@@ -45,7 +45,7 @@ function formatModelName(modelName) {
 function getCurrentModelInfo() {
   const ctx = getContext();
   const oai = ctx.oai_settings || {};
-  
+
   let modelName = '';
   if (typeof ctx.getChatCompletionModel === 'function') {
     modelName = ctx.getChatCompletionModel();
@@ -70,8 +70,8 @@ async function loadSettings() {
   }
 
   // If we have agentUrl but not IP/port, parse them
-  if (extension_settings[extensionName].agentUrl && 
-      (!extension_settings[extensionName].agentIp || !extension_settings[extensionName].agentPort)) {
+  if (extension_settings[extensionName].agentUrl &&
+    (!extension_settings[extensionName].agentIp || !extension_settings[extensionName].agentPort)) {
     const url = extension_settings[extensionName].agentUrl;
     const match = url.match(/^ws:\/\/([^:]+):(\d+)$/);
     if (match) {
@@ -100,21 +100,21 @@ async function onSaveClick() {
     extension_settings[extensionName].mode = $("#rpc-mode").val();
     extension_settings[extensionName].agentIp = $("#agent-ip").val() || 'localhost';
     extension_settings[extensionName].agentPort = $("#agent-port").val() || '6472';
-    
+
     // Create the agent URL from IP and port
     extension_settings[extensionName].agentUrl = `ws://${extension_settings[extensionName].agentIp}:${extension_settings[extensionName].agentPort}`;
-    
+
     // Save to server
     const response = await fetch('/api/plugins/sillyrpc/settings', {
       method: 'POST',
       headers: getRequestHeaders(),
       body: JSON.stringify(extension_settings[extensionName])
     });
-    
+
     if (!response.ok) {
       throw new Error(`Failed to save settings: ${response.status}`);
     }
-    
+
     saveSettingsDebounced();
     toastr.success('SillyRPC settings saved!');
     console.log('SillyRPC settings saved successfully');
@@ -145,9 +145,11 @@ function sendUpdate(character) {
 async function onChatChanged() {
   console.log('SillyRPC UI: Chat changed event detected');
   const context = getContext();
-  //const bodies = Array.isArray(context.chat) ? context.chat.map(m => m.mes) : Object.values(context.chat).map(m => m.mes);
-  //const tokens = context.getTextTokens(bodies).flat().length;
-  //console.log(`[SillyRPC] Token count: ${tokens}`)
+  const bodies = Array.isArray(context.chat)
+    ? context.chat.map(m => m.mes)
+    : Object.values(context.chat).map(m => m.mes);
+  const total = await context.getTokenCountAsync(bodies.join("\n"));
+
   let character = null;
 
   if (context.characterId !== undefined && context.characterId !== null) {
@@ -164,7 +166,7 @@ async function onChatChanged() {
         name: group.name || 'Group Chat',
         messageCount: context.chat?.length || 0,
         imageKey: '', // Groups may not have an image key
-        tokensChat: tokenCounts,
+        tokensChat: total,
         chatStartTimestamp: Date.now()
       };
     }
@@ -180,7 +182,7 @@ async function onChatChanged() {
 jQuery(async () => {
   try {
     console.log('SillyRPC UI: Initializing...');
-    
+
     // Add styles directly to the document
     const styleElement = document.createElement('style');
     styleElement.textContent = `
@@ -197,7 +199,7 @@ jQuery(async () => {
       }
     `;
     document.head.appendChild(styleElement);
-    
+
     // Create and inject the updated HTML with separate IP and port inputs
     const settingsHtml = `
       <div class="sillyrpc-settings">
@@ -224,13 +226,13 @@ jQuery(async () => {
         </div>
       </div>
     `;
-    
+
     // Append settings HTML to the extensions settings container
     $("#extensions_settings2").append(settingsHtml);
-    
+
     // Set up event listeners
     $("#save-settings").on("click", onSaveClick);
-    
+
     // Subscribe to SillyTavern events
     // Listen for message received events
     eventSource.on(event_types.MESSAGE_RECEIVED, (msg) => {
@@ -238,10 +240,10 @@ jQuery(async () => {
         sendUpdate(msg.character);
       }
     });
-    
+
     // Listen for chat changed events
     eventSource.on(event_types.CHAT_CHANGED, onChatChanged);
-    
+
     // Add additional listeners for character selection events
     if (event_types.CHARACTER_SELECTED) {
       eventSource.on(event_types.CHARACTER_SELECTED, async () => {
@@ -249,23 +251,23 @@ jQuery(async () => {
         await onChatChanged();
       });
     }
-    
+
     if (event_types.GROUP_SELECTED) {
       eventSource.on(event_types.GROUP_SELECTED, async () => {
         console.log('SillyRPC UI: Group selected event detected');
         await onChatChanged();
       });
     }
-    
+
     // Force an update check every 30 seconds to catch any missed changes
     setInterval(onChatChanged, 30000);
-    
+
     // Load initial settings
     await loadSettings();
-    
+
     // Trigger an initial update if a character is already selected
     await onChatChanged();
-    
+
     console.log('SillyRPC UI: Successfully initialized');
   } catch (error) {
     console.error('SillyRPC UI: Initialization error', error);
