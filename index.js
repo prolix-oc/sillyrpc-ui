@@ -137,11 +137,7 @@ function sendUpdate(character) {
 async function onChatChanged() {
   console.log('SillyRPC UI: Chat changed event detected');
   const context = getContext();
-  const messages = Array.isArray(context.chat)
-  ? context.chat
-  : Object.values(context.chat);
-  const texts = messages.map(m => m.mes);
-  const totalTokens = await context.getTokenCountAsync(texts.join("\n"));
+  const meta = context.chatMetadata;
 
   let character = null;
 
@@ -159,7 +155,7 @@ async function onChatChanged() {
         name: group.name || 'Group Chat',
         messageCount: context.chat?.length || 0,
         imageKey: '', // Groups may not have an image key
-        tokensChat: totalTokens,
+        tokensChat: meta.total_tokens,
         chatStartTimestamp: Date.now()
       };
     }
