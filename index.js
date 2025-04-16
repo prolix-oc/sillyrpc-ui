@@ -1,6 +1,17 @@
 // index.js
 import { extension_settings, getContext } from "../../../extensions.js";
-import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from "../../../../script.js";
+import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced, updateChatMetadata  } from "../../../../script.js";
+
+eventSource.on(event_types.GENERATE_AFTER_DATA, (type, data) => {
+  if (type === ChatCompletionService.TYPE && data.usage) {
+    // Store usage in chat metadata for later access
+    updateChatMetadata({
+      prompt_tokens: data.usage.prompt_tokens,
+      completion_tokens: data.usage.completion_tokens,
+      total_tokens: data.usage.total_tokens
+    }, false);
+  }
+});
 
 // Keep track of where your extension is located
 const extensionName = "sillyrpc-ui";
