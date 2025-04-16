@@ -1,9 +1,8 @@
 // index.js
 import { extension_settings, getContext, loadExtensionSettings } from "../../../extensions.js";
 import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from "../../../../script.js";
-import './style.css';
 
-// Keep track of where your extension is located, name should match repo name
+// Keep track of where your extension is located
 const extensionName = "sillyrpc-ui";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const defaultSettings = {
@@ -23,13 +22,6 @@ async function loadSettings() {
   // Updating settings in the UI
   $("#rpc-mode").val(extension_settings[extensionName].mode);
   $("#agent-url").val(extension_settings[extensionName].agentUrl);
-}
-
-// This function is called when a change is made to the settings
-function onSettingsInput() {
-  extension_settings[extensionName].mode = $("#rpc-mode").val();
-  extension_settings[extensionName].agentUrl = $("#agent-url").val();
-  saveSettingsDebounced();
 }
 
 // Save button handler
@@ -115,8 +107,41 @@ jQuery(async () => {
   try {
     console.log('SillyRPC UI: Initializing...');
     
-    // Load the HTML from the file
-    const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
+    // Instead of importing CSS, let's add our styles directly to the document
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      .sillyrpc-settings .inline-drawer-header b {
+        font-size: 1rem;
+      }
+      .sillyrpc-settings .inline-drawer-content {
+        padding: 0.5rem;
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    // Create and inject the HTML directly
+    const settingsHtml = `
+      <div class="sillyrpc-settings">
+        <div class="inline-drawer">
+          <div class="inline-drawer-toggle inline-drawer-header">
+            <b>Discord RPC Settings</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down"></div>
+          </div>
+          <div class="inline-drawer-content">
+            <label>Mode:
+              <select id="rpc-mode">
+                <option value="local">Local</option>
+                <option value="remote">Remote</option>
+              </select>
+            </label><br/>
+            <label>Agent URL:
+              <input id="agent-url" type="text" placeholder="ws://localhost:6472"/>
+            </label><br/>
+            <button id="save-settings" class="menu_button">Save</button>
+          </div>
+        </div>
+      </div>
+    `;
     
     // Append settings HTML to the extensions settings container
     // Using extensions_settings2 for UI-related extensions
@@ -124,7 +149,6 @@ jQuery(async () => {
     
     // Set up event listeners
     $("#save-settings").on("click", onSaveClick);
-    $("#rpc-mode, #agent-url").on("input", onSettingsInput);
     
     // Subscribe to SillyTavern events
     eventSource.on(event_types.MESSAGE_RECEIVED, (msg) => {
