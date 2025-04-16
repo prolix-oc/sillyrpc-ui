@@ -11,6 +11,15 @@ const defaultSettings = {
   agentUrl: 'ws://localhost:6472'
 };
 
+const PROVIDER_MAP = {
+  openai:      'OpenAI',
+  openrouter:  'OpenRouter',
+  claude:      'Claude',
+  anthropic:   'Anthropic',
+  chub:        'Chub.ai',
+  mistralai:   'MistralAI'
+};
+
 // Format model name
 function formatModelName(modelName) {
   if (!modelName) return '';
@@ -33,6 +42,20 @@ function formatModelName(modelName) {
   }
 }
 
+function formatProviderName(raw) {
+  if (!raw) return '';
+  return raw
+    .split(/[\s_\-()]+/)
+    .map(part => part.charAt(0).toUpperCase()
+                 + part.slice(1).toLowerCase()
+    )
+    .join(' ');
+}
+
+function getPrettyProvider(raw) {
+  return PROVIDER_MAP[raw.toLowerCase()] || formatProviderName(raw);
+}
+
 function getProviderLabel() {
   const ctx = getContext();
   if (ctx.chatCompletionSettings?.chat_completion_source) {
@@ -49,7 +72,8 @@ function getProviderLabel() {
       const host = new URL(rawUrl).hostname;
       const parts = host.split('.');
       const domain = parts.slice(-2).join('.');
-      return domain.charAt(0).toUpperCase() + domain.slice(1);
+      const cased = domain.charAt(0).toUpperCase() + domain.slice(1);
+      return getPrettyProvider(cased);
     } catch {
       return rawUrl;
     }
