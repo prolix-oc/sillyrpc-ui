@@ -1,6 +1,6 @@
 // index.js
 import { extension_settings, getContext } from "../../../extensions.js";
-import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced, ChatCompletionService } from "../../../../script.js";
+import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from "../../../../script.js";
 
 // Keep track of where your extension is located
 const extensionName = "sillyrpc-ui";
