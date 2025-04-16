@@ -1,6 +1,6 @@
 // index.js
 import { extension_settings, getContext } from "../../../extensions.js";
-import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced } from "../../../../script.js";
+import { eventSource, event_types, getRequestHeaders, saveSettingsDebounced, getTokenCountAsync } from "../../../../script.js";
 
 // Keep track of where your extension is located
 const extensionName = "sillyrpc-ui";
@@ -120,12 +120,12 @@ async function onSaveClick() {
 function sendUpdate(character) {
   const { name: prettyModel } = getCurrentModelInfo();
   const msgCount = character.messageCount || 0;
-
+  const tokenCount = character.tokensChat
   fetch('/api/plugins/sillyrpc/update', {
     method: 'POST',
     headers: getRequestHeaders(),
     body: JSON.stringify({
-      details: `${msgCount} chats deep with ${character.name}` || 'Unknown',
+      details: `${msgCount} chats deep with ${character.name} (${tokenCount} tokens)` || 'Unknown',
       state: `Using ${prettyModel}`,
       largeImageKey: character.imageKey || '',
       startTimestamp: character.chatStartTimestamp || Date.now()
@@ -134,10 +134,12 @@ function sendUpdate(character) {
 }
 
 // Enhanced chat change handler
-function onChatChanged() {
+async function onChatChanged() {
   console.log('SillyRPC UI: Chat changed event detected');
   const context = getContext();
+  const allText = chat.map(m => m.mes).join('\n');
   let character = null;
+  const tokenCount = await getTokenCountAsync(allText, /*padding=*/0);
 
   if (context.characterId !== undefined && context.characterId !== null) {
     character = {
@@ -153,6 +155,7 @@ function onChatChanged() {
         name: group.name || 'Group Chat',
         messageCount: context.chat?.length || 0,
         imageKey: '', // Groups may not have an image key
+        tokensChat: tokenCount,
         chatStartTimestamp: Date.now()
       };
     }
@@ -232,16 +235,16 @@ jQuery(async () => {
     
     // Add additional listeners for character selection events
     if (event_types.CHARACTER_SELECTED) {
-      eventSource.on(event_types.CHARACTER_SELECTED, () => {
+      eventSource.on(event_types.CHARACTER_SELECTED, async () => {
         console.log('SillyRPC UI: Character selected event detected');
-        onChatChanged();
+        await onChatChanged();
       });
     }
     
     if (event_types.GROUP_SELECTED) {
-      eventSource.on(event_types.GROUP_SELECTED, () => {
+      eventSource.on(event_types.GROUP_SELECTED, async () => {
         console.log('SillyRPC UI: Group selected event detected');
-        onChatChanged();
+        await onChatChanged();
       });
     }
     
@@ -252,7 +255,7 @@ jQuery(async () => {
     await loadSettings();
     
     // Trigger an initial update if a character is already selected
-    onChatChanged();
+    await onChatChanged();
     
     console.log('SillyRPC UI: Successfully initialized');
   } catch (error) {
