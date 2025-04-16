@@ -75,7 +75,7 @@ function getProviderLabel() {
       const cased = domain.charAt(0).toUpperCase() + domain.slice(1);
       return getPrettyProvider(cased);
     } catch {
-      return rawUrl;
+      return getPrettyProvider(rawUrl);
     }
   }
   return '';
