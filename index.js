@@ -60,8 +60,8 @@ function sendUpdate(character) {
       method: 'POST',
       headers: getRequestHeaders(),
       body: JSON.stringify({
-        details: `Chatting as ${character.name || 'Unknown'}`,
-        state: `${character.messageCount || 0} messages`,
+        details: `Chatting it up with ${character.name || 'Unknown'}`,
+        state: `${character.messageCount || 0} messages deep`,
         largeImageKey: character.imageKey || '',
         startTimestamp: character.chatStartTimestamp || Date.now()
       })
