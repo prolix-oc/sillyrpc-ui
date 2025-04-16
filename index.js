@@ -11,17 +11,22 @@ const defaultSettings = {
   agentUrl: 'ws://localhost:6472'
 };
 
-// Format model name as requested
+// Format model name
 function formatModelName(modelName) {
   if (!modelName) return '';
-  if (modelName.includes('/')) {
-    const parts = modelName.split('/');
-    const tail = parts.pop();
+  
+  let cleanName = modelName.split(':')[0].trim();
+
+  if (cleanName.includes('/')) {
+    const parts = cleanName.split('/');
+    const tail  = parts[parts.length - 1];
     return tail
-      .split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .split('-')
+      .map(w => w.charAt(0).toUpperCase()
+                 + w.slice(1))
       .join(' ');
   } else {
-    return modelName
+    return cleanName
       .split(' ')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ');
@@ -115,16 +120,13 @@ async function onSaveClick() {
 function sendUpdate(character) {
   const { name: prettyModel } = getCurrentModelInfo();
   const msgCount = character.messageCount || 0;
-  const stateText = prettyModel
-    ? `Using ${prettyModel} | ${msgCount} messages`
-    : `${msgCount} messages deep`;
 
   fetch('/api/plugins/sillyrpc/update', {
     method: 'POST',
     headers: getRequestHeaders(),
     body: JSON.stringify({
-      details: `Chatting it up with ${character.name || 'Unknown'}`,
-      state: stateText,
+      details: `${msgCount} chats deep with ${character.name} || 'Unknown'}`,
+      state: `Using ${prettyModel}`,
       largeImageKey: character.imageKey || '',
       startTimestamp: character.chatStartTimestamp || Date.now()
     })
