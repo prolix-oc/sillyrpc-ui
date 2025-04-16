@@ -137,7 +137,7 @@ function sendUpdate(character) {
 async function onChatChanged() {
   console.log('SillyRPC UI: Chat changed event detected');
   const context = getContext();
-  const allText = chat.map(m => m.mes).join('\n');
+  const allText = context.map(m => m.mes).join('\n');
   let character = null;
   const tokenCount = await countSourceTokens(allText, 0);
 
