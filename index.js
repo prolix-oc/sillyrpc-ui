@@ -141,8 +141,7 @@ async function onChatChanged() {
   ? context.chat
   : Object.values(context.chat);
   const texts = messages.map(m => m.mes);
-  const tokenArrays = context.getTextTokens(texts);
-  const totalTokens = tokenArrays.flat().length;
+  const totalTokens = await context.getTokenCountAsync(texts.join("\n"));
 
   let character = null;
 
