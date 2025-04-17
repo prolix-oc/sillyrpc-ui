@@ -36,21 +36,14 @@ function persistAvatarCache() {
 
 async function resolveAvatarUrl(character) {
   const key = character.imageKey;
-  if (!key) return '';
+  if (avatarCache[key]) return avatarCache[key];
 
-  if (avatarCache[key]) {
-    return avatarCache[key];
-  }
-
-  let url;
+  let url = '';
   try {
-    // use server proxy instead of direct Catbox
-    url = await uploadAvatarViaServer(key);
-  } catch (err) {
-    console.error('Avatar upload proxy failed:', err);
-    return '';
+    url = await uploadAvatarViaServer(character.localAvatarBlob);
+  } catch (e) {
+    console.error('Avatar upload failed:', e);
   }
-
   avatarCache[key] = url;
   persistAvatarCache();
   return url;
@@ -194,18 +187,21 @@ async function sendUpdate(character) {
   });
 }
 
-async function uploadAvatarViaServer(imageUrl) {
-  const response = await fetch('/api/plugins/sillyrpc/upload-avatar', {
+async function uploadAvatarViaServer(blob) {
+  const form = new FormData();
+  form.append('file', blob, 'avatar.png');
+
+  const res = await fetch('/api/plugins/sillyrpc/upload-avatar', {
     method: 'POST',
-    headers: getRequestHeaders(), // includes JSON content-type, auth, etc.
-    body: JSON.stringify({ imageUrl })
+    body: form
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `Upload failed: ${response.status}`);
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Upload failed: ${res.status}`);
   }
-  const { url } = await response.json();
-  return url; // Catbox URL back from your server
+  const { url } = await res.json();
+  return url;
 }
 
 async function onChatChanged() {
