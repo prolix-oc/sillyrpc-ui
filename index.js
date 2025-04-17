@@ -189,8 +189,10 @@ async function sendUpdate(character) {
 
 async function uploadAvatarViaServer() {
   const ctx = getContext();
-  const charObj = ctx.characters[ctx.characterId];
-  const imageUrl = ctx.getThumbnailUrl(charObj);
+  const charId  = ctx.characterId;
+  const charObj = ctx.characters[charId];
+  const avatarFile = charObj.avatar;
+  const imageUrl = ctx.getThumbnailUrl('avatar', avatarFile);
 
   if (!imageUrl) {
     console.error('No avatar URL found for character', ctx.characterId);
