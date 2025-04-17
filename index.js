@@ -204,7 +204,7 @@ async function uploadAvatarViaServer() {
     throw new Error(`Image fetch failed: ${imgRes.status}`);
   }
   const blob = await imgRes.blob();
-
+  const form = new FormData()
   form.append('file', blob, 'avatar.png');
 
   const res = await fetch('/api/plugins/sillyrpc/upload-avatar', {
