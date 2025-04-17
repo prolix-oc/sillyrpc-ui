@@ -20,19 +20,23 @@ const defaultSettings = {
 };
 
 const PROVIDER_MAP = {
-  openai:      'OpenAI',
-  openrouter:  'OpenRouter',
-  claude:      'Claude',
-  anthropic:   'Anthropic',
-  chub:        'Chub.ai',
-  mistralai:   'MistralAI'
+  openai: 'OpenAI',
+  openrouter: 'OpenRouter',
+  claude: 'Claude',
+  anthropic: 'Anthropic',
+  chub: 'Chub.ai',
+  mistralai: 'MistralAI'
 };
 
 async function resolveAvatarUrl() {
+  const settings = extension_settings[extensionName];
+  if (!settings.useAvatarUploads) {
+    return ''
+  }
   const ctx = getContext();
-  const charId   = ctx.characterId;
+  const charId = ctx.characterId;
   const charObj = ctx.characters[charId];
-  
+
   if (!charObj?.avatar) return '';
   const avatarFile = charObj.avatar;
 
@@ -77,7 +81,7 @@ function formatProviderName(raw) {
   return raw
     .split(/[\s_\-()]+/)
     .map(part => part.charAt(0).toUpperCase()
-                 + part.slice(1).toLowerCase()
+      + part.slice(1).toLowerCase()
     )
     .join(' ');
 }
@@ -136,6 +140,10 @@ async function loadSettings() {
   $("#rpc-mode").val(extension_settings[extensionName].mode);
   $("#agent-ip").val(extension_settings[extensionName].agentIp);
   $("#agent-port").val(extension_settings[extensionName].agentPort);
+  $("#enable-uploads").prop(
+    'checked',
+    extension_settings[extensionName].useAvatarUploads
+  );
 }
 
 // Save button handler
@@ -145,7 +153,8 @@ async function onSaveClick() {
     extension_settings[extensionName].mode = $("#rpc-mode").val();
     extension_settings[extensionName].agentIp = $("#agent-ip").val() || 'localhost';
     extension_settings[extensionName].agentPort = $("#agent-port").val() || '6472';
-
+    extension_settings[extensionName].useAvatarUploads =
+      $("#enable-uploads").is(":checked");
     // Create the agent URL from IP and port
     extension_settings[extensionName].agentUrl = `ws://${extension_settings[extensionName].agentIp}:${extension_settings[extensionName].agentPort}`;
 
@@ -171,7 +180,7 @@ async function onSaveClick() {
 
 // Function to send updates to the RPC server
 async function sendUpdate(character) {
-  const largeImageKey = await resolveAvatarUrl(character);
+  const imgKey = await resolveAvatarUrl(character);
 
   const { name: prettyModel } = getCurrentModelInfo();
   const msgCount = character.messageCount || 0;
@@ -182,7 +191,7 @@ async function sendUpdate(character) {
     body: JSON.stringify({
       details: `${msgCount} chats deep with ${character.name} (${tokenCount} tokens)` || 'Unknown',
       state: `Using ${prettyModel} through ${character.provider}`,
-      largeImageKey,
+      largeImageKey: imgKey,
       startTimestamp: character.chatStartTimestamp || Date.now()
     })
   });
@@ -254,30 +263,34 @@ jQuery(async () => {
 
     // Create and inject the updated HTML with separate IP and port inputs
     const settingsHtml = `
-      <div class="sillyrpc-settings">
-        <div class="inline-drawer">
-          <div class="inline-drawer-toggle inline-drawer-header">
-            <b>Discord RPC Settings</b>
-            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down"></div>
-          </div>
-          <div class="inline-drawer-content">
-            <label>Mode:
-              <select id="rpc-mode">
-                <option value="local">Local</option>
-                <option value="remote">Remote</option>
-              </select>
-            </label><br/>
-            <label>Agent IP:
-              <input id="agent-ip" type="text" placeholder="localhost" />
-            </label><br/>
-            <label>Agent Port:
-              <input id="agent-port" type="text" placeholder="6472" />
-            </label><br/>
-            <button id="save-settings" class="menu_button">Save</button>
-          </div>
-        </div>
+  <div class="sillyrpc-settings">
+    <div class="inline-drawer">
+      <div class="inline-drawer-toggle inline-drawer-header">
+        <b>Discord RPC Settings</b>
+        <div class="inline-drawer-icon fa-solid fa-circle-chevron-down"></div>
       </div>
-    `;
+      <div class="inline-drawer-content">
+        <label>Mode:
+          <select id="rpc-mode">
+            <option value="local">Local</option>
+            <option value="remote">Remote</option>
+          </select>
+        </label><br/>
+        <label>Agent IP:
+          <input id="agent-ip" type="text" placeholder="localhost" />
+        </label><br/>
+        <label>Agent Port:
+          <input id="agent-port" type="text" placeholder="6472" />
+        </label><br/>
+        <label>
+          <input id="enable-uploads" type="checkbox" />
+          Enable avatar uploads
+        </label><br/>
+        <button id="save-settings" class="menu_button">Save</button>
+      </div>
+    </div>
+  </div>
+`;
 
     // Append settings HTML to the extensions settings container
     $("#extensions_settings2").append(settingsHtml);
