@@ -28,24 +28,25 @@ const PROVIDER_MAP = {
   mistralai:   'MistralAI'
 };
 
-function persistAvatarCache() {
-  try {
-    localStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify(avatarCache));
-  } catch {}
-}
-
 async function resolveAvatarUrl(character) {
-  const key = character.imageKey;
-  if (avatarCache[key]) return avatarCache[key];
+  const ctx = getContext();
+  const charId  = character.characterId;
+  const charObj = ctx.characters[charId];
+  const avatarFile = charObj.avatar;
 
-  let url = '';
-  try {
-    url = await uploadAvatarViaServer(character.localAvatarBlob);
-  } catch (e) {
-    console.error('Avatar upload failed:', e);
+  if (!avatarFile) return '';
+
+  const resp = await fetch('/api/plugins/sillyrpc/upload-avatar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avatarFile })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    console.error('Proxy upload failed:', err.error || resp.status);
+    return '';
   }
-  avatarCache[key] = url;
-  persistAvatarCache();
+  const { url } = await resp.json();
   return url;
 }
 
@@ -185,39 +186,6 @@ async function sendUpdate(character) {
       startTimestamp: character.chatStartTimestamp || Date.now()
     })
   });
-}
-
-async function uploadAvatarViaServer() {
-  const ctx = getContext();
-  const charId  = ctx.characterId;
-  const charObj = ctx.characters[charId];
-  const avatarFile = charObj.avatar;
-  const imageUrl = ctx.getThumbnailUrl('avatar', avatarFile);
-
-  if (!imageUrl) {
-    console.error('No avatar URL found for character', ctx.characterId);
-    return '';
-  }
-
-  const imgRes = await fetch(imageUrl);
-  if (!imgRes.ok) {
-    throw new Error(`Image fetch failed: ${imgRes.status}`);
-  }
-  const blob = await imgRes.blob();
-  const form = new FormData()
-  form.append('file', blob, 'avatar.png');
-
-  const res = await fetch('/api/plugins/sillyrpc/upload-avatar', {
-    method: 'POST',
-    body: form
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Upload failed: ${res.status}`);
-  }
-  const { url } = await res.json();
-  return url;
 }
 
 async function onChatChanged() {
