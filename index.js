@@ -28,13 +28,13 @@ const PROVIDER_MAP = {
   mistralai:   'MistralAI'
 };
 
-async function resolveAvatarUrl(character) {
+async function resolveAvatarUrl() {
   const ctx = getContext();
-  const charId  = character.characterId;
+  const charId   = ctx.characterId;
   const charObj = ctx.characters[charId];
+  
+  if (!charObj?.avatar) return '';
   const avatarFile = charObj.avatar;
-
-  if (!avatarFile) return '';
 
   const resp = await fetch('/api/plugins/sillyrpc/upload-avatar', {
     method: 'POST',
