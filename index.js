@@ -194,8 +194,6 @@ async function onSaveClick() {
 // Function to send updates to the RPC server
 async function sendUpdate(character) {
   const imgKey = await resolveAvatarUrl(character);
-  if (!shouldSendUpdate(activity)) return;
-  lastSentPayload = activity;
   const { name: prettyModel } = getCurrentModelInfo();
   const msgCount = character.messageCount || 0;
   const tokenCount = character.tokensChat
