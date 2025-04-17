@@ -187,7 +187,11 @@ async function sendUpdate(character) {
   });
 }
 
-async function uploadAvatarViaServer(blob) {
+async function uploadAvatarViaServer(imageUrl) {
+  const response = await fetch(imageUrl);
+  if (!response.ok) throw new Error(`Image fetch failed: ${response.status}`);
+  const blob = await response.blob();
+
   const form = new FormData();
   form.append('file', blob, 'avatar.png');
 
@@ -195,7 +199,6 @@ async function uploadAvatarViaServer(blob) {
     method: 'POST',
     body: form
   });
-
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || `Upload failed: ${res.status}`);
