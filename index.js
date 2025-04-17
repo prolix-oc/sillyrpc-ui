@@ -35,7 +35,7 @@ function persistAvatarCache() {
 }
 
 async function resolveAvatarUrl(character) {
-  const key = character.imageKey || character.localAvatarBlob?.name;
+  const key = character.imageKey;
   if (!key) return '';
 
   if (avatarCache[key]) {
@@ -44,20 +44,15 @@ async function resolveAvatarUrl(character) {
 
   let url;
   try {
-    if (character.localAvatarBlob) {
-      url = await uploadAvatarBlob(character.localAvatarBlob);
-    } else {
-      url = await uploadAvatarUrl(character.imageKey);
-    }
+    // use server proxy instead of direct Catbox
+    url = await uploadAvatarViaServer(key);
   } catch (err) {
-    console.error('Failed to upload avatar:', err);
+    console.error('Avatar upload proxy failed:', err);
     return '';
   }
 
-  // 3️⃣ Cache & persist
   avatarCache[key] = url;
   persistAvatarCache();
-
   return url;
 }
 
@@ -199,31 +194,18 @@ async function sendUpdate(character) {
   });
 }
 
-async function uploadAvatarBlob(blob) {
-  const form = new FormData();
-  form.append('reqtype', 'fileupload');
-  form.append('fileToUpload', blob, 'avatar.png');
-  const proxy = 'https://cors-proxy.fringe.zone/';
-  const res = await fetch(proxy + 'https://catbox.moe/user/api.php', {
+async function uploadAvatarViaServer(imageUrl) {
+  const response = await fetch('/api/plugins/sillyrpc/upload-avatar', {
     method: 'POST',
-    body: form
+    headers: getRequestHeaders(), // includes JSON content-type, auth, etc.
+    body: JSON.stringify({ imageUrl })
   });
-  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-  const url = await res.text();
-  return url;
-}
-
-async function uploadAvatarUrl(imageUrl) {
-  const form = new FormData();
-  form.append('reqtype', 'urlupload');
-  form.append('url', imageUrl);
-  const proxy = 'https://cors-proxy.fringe.zone/';
-  const res = await fetch(proxy + 'https://catbox.moe/user/api.php', {
-    method: 'POST',
-    body: form
-  });
-  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-  return await res.text();
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `Upload failed: ${response.status}`);
+  }
+  const { url } = await response.json();
+  return url; // Catbox URL back from your server
 }
 
 async function onChatChanged() {
