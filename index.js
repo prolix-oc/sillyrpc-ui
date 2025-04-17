@@ -10,6 +10,12 @@ try {
   avatarCache = {};
 }
 
+eventSource.on(event_types.CHARACTER_SELECTED, async () => {
+  await onChatChanged();
+});
+
+let lastSentPayload = null;
+
 // Keep track of where your extension is located
 const extensionName = "sillyrpc-ui";
 const defaultSettings = {
@@ -52,6 +58,13 @@ async function resolveAvatarUrl() {
   }
   const { url } = await resp.json();
   return url;
+}
+
+function shouldSendUpdate(newPayload) {
+  // Option A: JSON stringify comparison
+  const prev = JSON.stringify(lastSentPayload);
+  const next = JSON.stringify(newPayload);
+  return prev !== next;
 }
 
 // Format model name
@@ -181,7 +194,8 @@ async function onSaveClick() {
 // Function to send updates to the RPC server
 async function sendUpdate(character) {
   const imgKey = await resolveAvatarUrl(character);
-
+  if (!shouldSendUpdate(activity)) return;
+  lastSentPayload = activity;
   const { name: prettyModel } = getCurrentModelInfo();
   const msgCount = character.messageCount || 0;
   const tokenCount = character.tokensChat
