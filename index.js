@@ -205,17 +205,18 @@ async function uploadAvatarViaServer() {
   }
   const blob = await imgRes.blob();
 
-  const form = new FormData();
   form.append('file', blob, 'avatar.png');
-  const proxyRes = await fetch('/api/plugins/sillyrpc/upload-avatar', {
+
+  const res = await fetch('/api/plugins/sillyrpc/upload-avatar', {
     method: 'POST',
     body: form
   });
-  if (!proxyRes.ok) {
-    const err = await proxyRes.json().catch(() => ({}));
-    throw new Error(err.error || `Upload failed: ${proxyRes.status}`);
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Upload failed: ${res.status}`);
   }
-  const { url } = await proxyRes.json();
+  const { url } = await res.json();
   return url;
 }
 
