@@ -187,23 +187,35 @@ async function sendUpdate(character) {
   });
 }
 
-async function uploadAvatarViaServer(imageUrl) {
-  const response = await fetch(imageUrl);
-  if (!response.ok) throw new Error(`Image fetch failed: ${response.status}`);
-  const blob = await response.blob();
+async function uploadAvatarViaServer() {
+  const ctx = getContext();
+  const charObj = ctx.characters[ctx.characterId];
+  const imageUrl = ctx.getThumbnailUrl(charObj);
 
+  if (!imageUrl) {
+    console.error('No avatar URL found for character', ctx.characterId);
+    return '';
+  }
+
+  // 1️⃣ Fetch the real image
+  const imgRes = await fetch(imageUrl);
+  if (!imgRes.ok) {
+    throw new Error(`Image fetch failed: ${imgRes.status}`);
+  }
+  const blob = await imgRes.blob();
+
+  // 2️⃣ Send blob to server proxy
   const form = new FormData();
   form.append('file', blob, 'avatar.png');
-
-  const res = await fetch('/api/plugins/sillyrpc/upload-avatar', {
+  const proxyRes = await fetch('/api/plugins/sillyrpc/upload-avatar', {
     method: 'POST',
     body: form
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Upload failed: ${res.status}`);
+  if (!proxyRes.ok) {
+    const err = await proxyRes.json().catch(() => ({}));
+    throw new Error(err.error || `Upload failed: ${proxyRes.status}`);
   }
-  const { url } = await res.json();
+  const { url } = await proxyRes.json();
   return url;
 }
 
